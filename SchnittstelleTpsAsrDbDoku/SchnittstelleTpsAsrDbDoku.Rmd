@@ -99,6 +99,12 @@ r6objDocStat$set_current_status(psVersion = "0.0.902",
 r6objDocStat$set_current_status(psVersion = "0.0.903",
                                 psStatus = "Schnittstelle und Bestandteile",  
                                 psProject = "VnTps")
+r6objDocStat$set_current_status(psVersion = "0.0.904",
+                                psStatus = "Struktur der übermittelten Daten",  
+                                psProject = "VnTps")
+r6objDocStat$set_current_status(psVersion = "0.0.905",
+                                psStatus = "Komponenten der Medikamente und des Inventars",  
+                                psProject = "VnTps")
 r6objDocStat$include_doc_stat(psTitle = "# Dokumentenstatus")
 ```
 
@@ -159,21 +165,117 @@ knitr::include_graphics(path = "ApiComp.pdf")
 ## Vorteile einer Schnittstelle
 Schnittstellen erzeugen Unabhängigkeiten zwischen Systemen, welche Daten untereinander austauschen. Für unser Szenarium heisst das, dass wir über eine Schnittstelle für den Datenaustausch die Unabhängigkeit der TPS von der ASR-DB gewährleisten. Weshalb das wichtig ist wollen wir hier kurz analysieren. 
 
-Grundsätzlich wäre es möglich Daten ohne Schnittstellen zwischen TPS und ASR-DB auszutauschen. In beiden System TPS und ASR-DB werden die Daten in einer Datenbank oder einer ähnlichen Struktur gehalten. Wenn die beiden Partner TPS und ASR-DB das Design^[Verteilung der Informationen auf Datenbanktabellen] beider Datenbanken kennen, könnten die Daten auch direkt von der jeweiligen Partner-Datenbank abgefragt werden. Ein Datenaustausch über direkte Datenbankabfragen schafft eine direkte Abhängigkeit des Datenaustauschs vom Design der beiden Partner-Datenbanken. Durch diese Abhängigkeit muss bei jeder Anpassung des Datenbankdesigns bei beiden Partnern auch die Abfragen für den Datenaustausch angepasst werden. Dies würde zu einer erhöhten Fehleranfälligkeit und zu einer extremen Zunahme des Aufwandes für das Management eines solchen Datenaustauschs führen. Dieses Problem ist eindeutig durch die Abhängigkeit zwischen dem Datenaustausch und dem Design der Datenbanken verursacht.
+Grundsätzlich wäre es möglich Daten ohne Schnittstellen zwischen TPS und ASR-DB auszutauschen. In beiden System TPS und ASR-DB werden die Daten in einer Datenbank oder einer ähnlichen Struktur gehalten. Wenn die beiden Partner TPS und ASR-DB das Design^[Organisation und Verteilung der Informationen auf Datenbanktabellen] beider Datenbanken kennen, könnten die Daten auch direkt von der jeweiligen Partner-Datenbank abgefragt werden. Ein Datenaustausch über direkte Datenbankabfragen schafft eine direkte Abhängigkeit des Datenaustauschs vom Design der beiden Partner-Datenbanken. Durch diese Abhängigkeit muss bei jeder Anpassung des Datenbankdesigns bei beiden Partnern auch die Abfragen für den Datenaustausch angepasst werden. Dies würde zu einer erhöhten Fehleranfälligkeit und zu einer extremen Zunahme des Aufwandes für das Management eines solchen Datenaustauschs führen. Dieses Problem ist eindeutig durch die Abhängigkeit zwischen dem Datenaustausch und dem Design der Datenbanken verursacht.
 
 Eine Schnittstelle kann diese Abhängigkeit durchbrechen. Durch die Definition einer Schnittstelle wird das Design der Datenbank vom Datenaustausch entkoppelt. Bei einer Änderung des Datenbankdesigns muss jeder Partner des Datenaustauschs bei sich lokal sicherstellen, dass die Definition der Schnittstelle erfüllt ist.
 
 
-## Schnittstellen für den Datenaustausch
+# Schnittstellen für den Datenaustausch
+## Übermittelte Daten
+Die folgenden Datenobjekte müssen pro Datenrecord übertragen werden. Bei der Auflistung handelt es sich um die Komponenten des übermittelten Datenrecords. Die folgende Tabelle gibt eine Übersicht über die Komponenten.
 
-### Übermittelte Daten
+```{r DataCompTable, echo=FALSE, results='asis'}
+dfDataComp <- data.frame(
+  Name = c("TVD-Nummer des Betriebs",
+           "TVD-Nummer des Tieres",
+           "Zeitstempel",
+           "Behandlungsdatum",
+           "Datum Betriebsbesuch",
+           "Diagnose",
+           "Medikamente",
+           "Inventar"),
+  Typ  = c("String",
+           "String",
+           "Date",
+           "Date",
+           "Date",
+           "Code",
+           "Liste von Medikamenten",
+           "Liste von Inventaritems"),
+  Bemerkung = c("Zwingend für Identifikation des Betriebs",
+                "Zwingend für Identifikation des Tieres",
+                "Zwingend für Zeitpunkt der Erstellung des Records",
+                "für Behandlungsjournal, bestimmt Absetzfristen",
+                "Datum des Betriebsbesuchs",
+                "Identifikation per Code",
+                "Liste der Medikamente",
+                "An Landwirt abgegebene Medikamente")
+)
+knitr::kable(dfDataComp)
+```
 
+In der Kolonne `Typ` in der obigen Tabelle wird der Datentyp spezifiziert. Bei den Typen `String` und `Date` handelt es sich um system-nahe Datentypen, welche nicht genauer definiert werden müssen. In der aktuellen Version kann nur eine Diagnose pro Record erfasst werden. Die Diagnose ist über einen Code erfasst. Dieser kann eine reine Zahl oder ein String sein. Falls pro Datenrecord mehrere Diagnosen abgelegt werden sollen, benötigt dies eine Änderung in der Tabelle. Bei den Medikamenten und dem Inventar liegen zusammengesetzte Datentypen vor. Bei den Medikamenten besteht der zusammengesetzte Typ aus einer Liste von einzelnen Medikamenten. Beim Inventar handelt es sich um eine Liste von Inventaritems. Jedes Medikament besteht wiederum aus einzelnen Komponenten.
+
+## Medikamente
+Die Komponenten eines bestimmten Medikaments sind in der folgenden Tabelle aufgelistet.
+
+```{r CompMediTable}
+dfCompMedi <- data.frame(
+  Name      = c("Art",
+                "Verabreichungsmenge",
+                "Einheit",
+                "Verabreichungsdatum",
+                "Behandlungsbeginn",
+                "Behandlungsende",
+                "Absetzfrist Milch",
+                "Absetzfrist Fleisch",
+                "Absetzfrist Organe",
+                "Absetzfrist Injektionsstelle"),
+  Typ       = c("String",
+                "Number",
+                "String",
+                "Date",
+                "Date",
+                "Date",
+                "Number",
+                "Number",
+                "Number",
+                "Number"),
+  Bemerkung = c("Art des Medikaments",
+                "Menge des verabreichten Medikaments",
+                "Einheit der Verabreichungsmenge",
+                "Datum der Verabreichung",
+                "Datum des Behandlungsbeginns",
+                "Datum des Behandlungsendes",
+                "Absetzfrist Milch",
+                "Absetzfrist Fleisch",
+                "Absetzfrist Organe",
+                "Absetzfrist Injektionsstelle")
+)
+knitr::kable(dfCompMedi)
+```
+
+
+## Inventaritem
+Das Inventar besteht aus Liste aus sogenannten Inventaritems. Im Gegensatz zur Liste der Medikamente scheint beim Inventar nur die Art des Medikaments und die jeweiligen Mengen relevant zu sein. Zusätzlich zur Menge der Medikamente muss auch eine Einheit angegeben werden. Somit resultieren die folgenden Komponenten
+
+```{r CompInvMedi}
+dfInvMedi <- data.frame(
+  Name      = c("Art",
+                "Menge",
+                "Einheit"),
+  Typ       = c("String",
+                "Number",
+                "String"),
+  Bemerkung = c("Art des Medikaments",
+                "Menge des abgegebenen Medikaments",
+                "Einheit der Medikamentenabgabe")
+)
+knitr::kable(dfInvMedi)
+```
+
+
+## Beispielrecord für Datenübertragung
+
+
+## Definition von Services
 
 
 # Abgrenzung
-Mit der Umsetzung dieses Projekts wird ein weiterer Datenstrohm eröffnet, auf welchem Gesundheitsdaten in das System der ASR-DB importiert werden. Davon abgesehen können Züchter aktuell selber über die graphischen Oberflächen redonline+ und BrunaNet Gesundheitsdaten von ihren Zuchttieren erfassen. Ob und falls ja wie allfällige Datenredundanzen zusammengeführt und bereinigt werden, ist nicht Thema dieser Beschreibung.
+Mit der Umsetzung dieses Projekts wird ein weiterer Datenstrohm eröffnet, auf welchem Gesundheitsdaten in das System der ASR-DB importiert werden. Davon abgesehen können Züchter aktuell selber über die graphischen Oberflächen redonline+ und BrunaNet Gesundheitsdaten von ihren Zuchttieren erfassen. TierärztInnen mit Berechtigungen für einen Betrieb können aufgrund des Pilotprojekts im Bereich der Gesundheitsdatenerfassung im Netzwert Rindergesundheit auch direkt über die graphischen Oberflächen Gesundheitsdaten in der ASR-DB erfassen. Die Verarbeitung der von den TPS an die ASR-DB übermittelten Daten und wie diese Daten allenfalls mit den von Züchtern oder TierärtzInnen direkt erfassten Gesundheitsdaten integriert werden, ist nicht Thema dieses Dokuments.
 
-Dieses Dokument ist eine reine Schnittstellenbeschreibung. Somit enthält es keine konkreten Angaben zu einer Umsetzung in einem Softwareprogramm.
+Dieses Dokument ist eine reine Schnittstellenbeschreibung. Somit enthält es keine Angaben zu einer Umsetzung in einem Softwareprogramm. Die Umsetzung muss grösstenteils in den TPS implementiert werden. 
+
 
 
 <!-- ------------------------------------------------------------------------------------ --
