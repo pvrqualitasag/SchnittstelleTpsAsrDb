@@ -1,6 +1,8 @@
 ---
 output:
   pdf_document:
+    toc: false
+    number_sections: true
     fig_caption: no
     includes:
       in_header: tex/header.tex
@@ -82,9 +84,11 @@ Chamerstrasse 56, CH-6300 Zug       \\
 \end{tabular}
 }
 
+
 \pagebreak
 
 \tableofcontents
+
 
 \pagebreak
 
@@ -105,6 +109,9 @@ r6objDocStat$set_current_status(psVersion = "0.0.904",
 r6objDocStat$set_current_status(psVersion = "0.0.905",
                                 psStatus = "Komponenten der Medikamente und des Inventars",  
                                 psProject = "VnTps")
+r6objDocStat$set_current_status(psVersion = "0.0.906",
+                                psStatus = "Alternative Modellierung von Gesundheitsdaten",  
+                                psProject = "VnTps")
 r6objDocStat$include_doc_stat(psTitle = "# Dokumentenstatus")
 ```
 
@@ -112,7 +119,7 @@ r6objDocStat$include_doc_stat(psTitle = "# Dokumentenstatus")
 \pagebreak
 
 
-# Erklärung
+# Erklärung {#Disc}
 ```{r AbbrevNotMentioned, echo=FALSE, results='hide'}
 r6ob_abbrtable$add_abbrev(psAbbrev  = "ASR", 
                           psMeaning = "Arbeitsgemeinschaft Schweizer Rinderzüchter", 
@@ -120,25 +127,31 @@ r6ob_abbrtable$add_abbrev(psAbbrev  = "ASR",
 r6ob_abbrtable$add_abbrev(psAbbrev  = "ZO", 
                           psMeaning = "Zuchtorganisation", 
                           pbOut     = FALSE )
+r6ob_abbrtable$add_abbrev(psAbbrev  = "TVD", 
+                          psMeaning = "Tierverkehrsdatenbank", 
+                          pbOut     = FALSE )
 ```
 Dieses Dokument ist ein Entwurf einer Beschreibung der Datenschnittstelle zwischen `r r6ob_abbrtable$add_abbrev(psAbbrev = "TPS", psMeaning = "Tierarzt Praxissoftware")` und der `r r6ob_abbrtable$add_abbrev(psAbbrev = "ASR-DB", psMeaning = "Datenbank der bei ASR angeschlossenen ZO")`.
 
 
-# Ausgangslage
+# Ausgangslage {#sec:Back}
 Bestehende Datenquellen, welche Gesundheitsdaten von Milchvieh enthalten sollen miteinander vernetzt werden. Im  Kontext dieses Projekts definieren wir den Term `Gesundheitsdaten` als Oberbegriff für Diagnosen, Behandlungen und Medikamente. Die Vernetzung der Datenquellen mit Gesundheitsdaten hat das Ziel die Daten zwischen den Quellen auszutauschen. Als ein Beispiel von verschiedenen Datenquellen mit Gesundheitsdaten können wir die verschiedenen Instanzen der TPS bei den Tierärzten und die ASR-DB betrachten. Die folgende Darstellung gibt eine Übersicht über den geplanten Datentransfer zwischen TPS und ASR-DB. Die in blauer Farbe gezeichneten Pfeile stellen schon existierende Datenverbindungen dar. Der grüne Pfeil der Datenübermittlung zwischen TPS und Argus-DB kommt im Rahmen dieses Projekts neu hinzu.
 
+```
+TODO: Anpassung Grafik: Berücksichtigung des Datenverbunds
+```
 
 ```{r DataSource, conv.odg=TRUE, conv.odg=TRUE, odg.graph.cache=TRUE, fig.align='center', out.width="13cm", echo=FALSE, results='asis'}
 knitr::include_graphics(path = "DataSource.pdf")
 ```
 
-## Szenarium
-Wir verwenden das folgende Szenarium für die Beschreibung der Vorgänge im oben gezeigten Diagramm. Der Tierarzt besucht einen bestimmten Betrieb für eine Konsultation und/oder für eine Bestandesbetreuung (siehe 1). Dabei können Gesundheitsdaten in Form von Diagnosen, Behandlungen und Medikationen anfallen. Diese werden vom Tierarzt erfasst und ins TPS eingetragen (siehe 2). Diese Vorgänge und Datenströme existieren bereits und werden durch dieses Projekt nicht beeinflusst werden.
+## Szenarium {#sec:Scenario}
+Wir verwenden das folgende Szenarium für die Beschreibung der Vorgänge im oben gezeigten Diagramm. Der Tierarzt besucht einen bestimmten Betrieb, welcher durch die TVD-Betriebsnummer identifiziert wird. Während dieses Betriebsbesuchs führt er eine Reihe von Konsultationen aus und/oder macht eine Bestandesbetreuung (siehe Punkt 1 im Diagramm). Dabei können Gesundheitsdaten in Form von Diagnosen und Behandlungen anfallen. Die detailierte Modellierung von Gesundheitsdaten wird später (siehe Abschnitt \secref{sec:ModelHealthData}) beschrieben. Diese werden vom Tierarzt erfasst und ins TPS eingetragen (siehe Punkt 2). Diese Vorgänge und Datenströme existieren bereits und werden durch dieses Projekt nicht beeinflusst werden.
 
-Neu in diesem Projekt ist die Datenübertragung vom einzelnen TPS zur ASR-DB (siehe 3). In diesem Vorgang sollen periodisch die Gesundheitsdaten für das Milchvieh von den TPS zur ASR-DB übertragen werden. Die für diese Übertragung benötigten Schnittstellen werden in diesem Dokument beschrieben.
+Neu in diesem Projekt ist die Datenübertragung vom einzelnen TPS zur ASR-DB (siehe Punkt 3). In diesem Vorgang sollen periodisch die Gesundheitsdaten für das Milchvieh von den TPS zur ASR-DB übertragen werden. Die für diese Übertragung benötigten Schnittstellen werden in diesem Dokument beschrieben.
 
 
-# Beschreibung der geplanten Schnittstellen
+# Beschreibung der geplanten Schnittstellen {#sec:ApiDescr}
 ## Terminologie
 Technisch gesehen, entspricht eine __Schnittstelle__ eines Softwaresystems den Signaturen und allenfalls den Dokumentationen aller öffentlicher Methoden^[Eigentlich sollte man hier von __Routinen__ der Gesamtheit aus Funktionen und Prozeduren sprechen]. Methoden sind dann öffentlich, sobald diese einem potentiellen Benutzer des Systems zur Verfügung gestellt werden. 
 
@@ -170,41 +183,78 @@ Grundsätzlich wäre es möglich Daten ohne Schnittstellen zwischen TPS und ASR-
 Eine Schnittstelle kann diese Abhängigkeit durchbrechen. Durch die Definition einer Schnittstelle wird das Design der Datenbank vom Datenaustausch entkoppelt. Bei einer Änderung des Datenbankdesigns muss jeder Partner des Datenaustauschs bei sich lokal sicherstellen, dass die Definition der Schnittstelle erfüllt ist.
 
 
-# Schnittstellen für den Datenaustausch
-## Übermittelte Daten
-Die folgenden Datenobjekte müssen pro Datenrecord übertragen werden. Bei der Auflistung handelt es sich um die Komponenten des übermittelten Datenrecords. Die folgende Tabelle gibt eine Übersicht über die Komponenten.
+# Schnittstelle für den Datenaustausch {#sec:ApiDataEx}
+Im Abschnitt \secref{sec:ApiDescr} haben wir gesehen, dass eine Schnittstelle aus den Signaturen aller Methoden besteht und in diese Signaturen unter anderem aus Datentypen bestehen. Nun definieren wir als erstes die Datentypen und dann die Methoden, welche zu unserer Schnittstelle gehören sollen.
 
-```{r DataCompTable, echo=FALSE, results='asis'}
-dfDataComp <- data.frame(
-  Name = c("TVD-Nummer des Betriebs",
-           "TVD-Nummer des Tieres",
-           "Zeitstempel",
-           "Behandlungsdatum",
-           "Datum Betriebsbesuch",
-           "Diagnose",
-           "Medikamente",
-           "Inventar"),
-  Typ  = c("String",
-           "String",
-           "Date",
-           "Date",
-           "Date",
-           "Code",
-           "Liste von Medikamenten",
-           "Liste von Inventaritems"),
-  Bemerkung = c("Zwingend für Identifikation des Betriebs",
-                "Zwingend für Identifikation des Tieres",
-                "Zwingend für Zeitpunkt der Erstellung des Records",
-                "für Behandlungsjournal, bestimmt Absetzfristen",
-                "Datum des Betriebsbesuchs",
-                "Identifikation per Code",
-                "Liste der Medikamente",
-                "An Landwirt abgegebene Medikamente")
-)
-knitr::kable(dfDataComp)
+## Modellierung der übermittelten Gesundheitsdaten {#sec:ModelHealthData}
+Aufgrund des angenommenen Szenariums (siehe Abschnitt \secref{sec:Scenario}) wird das folgende Modell für die zu übermittelnden Gesundheitsdaten, welche bei einem Betriebsbesuch anfallen, vorgeschlagen. Das Datenmodell besteht aus zusammengesetzten Elementen, welche ineinander geschachtelt sind. 
+<!--Das folgende Diagramm zeigt das vorgeschlagene Datenmodell grafisch.-->
+
+```{r DataModelDiagram, conv.odg=TRUE, conv.odg=TRUE, odg.graph.cache=TRUE, fig.align='center', out.width="11cm", echo=FALSE, results='asis', eval=FALSE}
+knitr::include_graphics(path = "DataModelDiagram.pdf")
 ```
 
-In der Kolonne `Typ` in der obigen Tabelle wird der Datentyp spezifiziert. Bei den Typen `String` und `Date` handelt es sich um system-nahe Datentypen, welche nicht genauer definiert werden müssen. In der aktuellen Version kann nur eine Diagnose pro Record erfasst werden. Die Diagnose ist über einen Code erfasst. Dieser kann eine reine Zahl oder ein String sein. Falls pro Datenrecord mehrere Diagnosen abgelegt werden sollen, benötigt dies eine Änderung in der Tabelle. Bei den Medikamenten und dem Inventar liegen zusammengesetzte Datentypen vor. Bei den Medikamenten besteht der zusammengesetzte Typ aus einer Liste von einzelnen Medikamenten. Beim Inventar handelt es sich um eine Liste von Inventaritems. Jedes Medikament besteht wiederum aus einzelnen Komponenten.
+In der folgenden Tabelle sind die Komponenten der übermittelten Gesundheitsdaten, welche bei einem Betriebsbesuch anfallen aufgelistet.
+
+```{r DataTableFarmVisit, echo=FALSE, results='asis'}
+dfDataFarmVisit <- data.frame(
+  Name = c("TVD-Nummer des Betriebs",
+           "Datum Betriebsbesuch",
+           "Tierarzt",
+           "Konsultationen"),
+  Typ  = c("Number",
+           "Date",
+           "String",
+           "List"),
+  Bemerkung = c("Identifikation des Betriebs",
+                "Zeitpunkt des Betriebsbesuchs des Tierarztes",
+                "Identifikation des Tierarztes",
+                "Liste von Einzelkonsultationen")
+)
+knitr::kable(dfDataFarmVisit)
+```
+
+In diesem Modell des Betriebsbesuchs wird angenommen, dass bei einem Besuch eine Reihe von Konsultationen bei verschiedenen Tieren absolviert wird. Die Bestandteile einer Einzelkonsultation sind in der folgenden Tabelle dargestellt.
+
+```{r DataTableCons, echo=FALSE, results='asis'}
+dfDataCons <- data.frame(
+  Name = c("Tier TVD-Nr",
+           "Zeitstempel",
+           "Diagnosen"),
+  Typ  = c("String",
+           "DateTime",
+           "Liste"),
+  Bemerkung = c("Identifikation des Tieres",
+                "Zeitpunkt der Konsultation",
+                "Liste von Einzeldiagnosen")
+)
+```
+
+
+In der Kolonne `Typ` in der obigen Tabelle wird der Datentyp spezifiziert. Bei den Typen `String` und `Date` handelt es sich um system-nahe Datentypen, welche hier nicht genauer definiert werden. In der aktuellen Version besteht die Komponente `Diagnose` aus einer Liste von Einzeldiagnosen. Jede Einzeldiagnose ist wiederum ein zusammengesetzter Datentyp, welcher in der folgenden Tabelle definiert ist. 
+
+\pagebreak
+
+```{r DiagnoseCompTable, echo=FALSE, results='asis'}
+dfDiagComp <- data.frame(
+  Name      = c("Name", 
+                "Code",
+                "Medikamente",
+                "Inventar"),
+  Typ       = c("String",
+                "Number",
+                "List",
+                "List"),
+  Bemerkung = c("Name der Einzeldiagnose",
+                "Numerischer Code der Einzeldiagnose",
+                "Liste von Medikamenten",
+                "Liste von Inventarbestandteilen")
+)
+knitr::kable(dfDiagComp)
+```
+
+
+Bei den Medikamenten und dem Inventar liegen zusammengesetzte Datentypen vor. Bei den Medikamenten besteht der zusammengesetzte Typ aus einer Liste von einzelnen Medikamenten. Beim Inventar handelt es sich um eine Liste von  Inventarbestandteilen, wobei jeder Bestandteil ein vom Tierarzt an den Landwirt abgegebenes Medikament repräsentiert. Im Gegensatz zu den Medikamenten sind bei den einzelnen Inventarbestandteilen weniger Details verlangt. Jedes Medikament besteht wiederum aus einzelnen Komponenten.
 
 ## Medikamente
 Die Komponenten eines bestimmten Medikaments sind in der folgenden Tabelle aufgelistet.
@@ -246,8 +296,8 @@ knitr::kable(dfCompMedi)
 ```
 
 
-## Inventaritem
-Das Inventar besteht aus Liste aus sogenannten Inventaritems. Im Gegensatz zur Liste der Medikamente scheint beim Inventar nur die Art des Medikaments und die jeweiligen Mengen relevant zu sein. Zusätzlich zur Menge der Medikamente muss auch eine Einheit angegeben werden. Somit resultieren die folgenden Komponenten
+## Inventarbestandteile
+Das Inventar besteht aus einer Liste aus sogenannten Inventarbestandteilen. Im Gegensatz zur Liste der Medikamente scheint beim Inventar nur die Art des Medikaments und die jeweiligen Mengen relevant zu sein. Zusätzlich zur Menge der Medikamente muss auch eine Einheit angegeben werden. Somit resultieren die folgenden Komponenten
 
 ```{r CompInvMedi}
 dfInvMedi <- data.frame(
@@ -292,6 +342,8 @@ if (!r6ob_abbrtable$is_empty_abbr())
 ```{r AbrTableToDocument}
 r6ob_abbrtable$include_abbr_table(psAbbrTitle = "# Abkürzungen")
 ```
+
+
 
 
 
